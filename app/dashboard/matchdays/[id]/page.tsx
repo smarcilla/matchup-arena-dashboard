@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useDashboard } from '@/contexts/DashboardContext';
 import {
   LoadingPage,
@@ -42,7 +43,6 @@ export default function MatchdayDetailPage() {
   // Player form state
   const [playerName, setPlayerName] = useState('');
   const [playerRanking, setPlayerRanking] = useState(1);
-  const [playerImage, setPlayerImage] = useState<File | null>(null);
   const [playerImageUrl, setPlayerImageUrl] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -92,7 +92,6 @@ export default function MatchdayDetailPage() {
   }
 
   const handleImageUpload = async (file: File) => {
-    setPlayerImage(file);
     setUploadingImage(true);
 
     try {
@@ -340,11 +339,15 @@ export default function MatchdayDetailPage() {
                           {player.ranking}
                         </span>
                         {player.image ? (
-                          <img
-                            src={player.image}
-                            alt={player.name}
-                            className="w-12 h-12 rounded-lg object-cover"
-                          />
+                          <div className="w-12 h-12 rounded-lg relative overflow-hidden">
+                            <Image
+                              src={player.image}
+                              alt={player.name}
+                              fill
+                              className="object-cover"
+                              unoptimized
+                            />
+                          </div>
                         ) : (
                           <div className="w-12 h-12 rounded-lg bg-zinc-700 flex items-center justify-center">
                             <span className="text-zinc-400">?</span>

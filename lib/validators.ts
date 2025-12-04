@@ -5,12 +5,9 @@
 import type {
   Player,
   CompetitionFile,
-  RootIndex,
-  DashboardState,
   ValidationResult,
   DraftCompetition,
   DraftMatchday,
-  DraftPlayer,
 } from "./types";
 
 // =============================================================================

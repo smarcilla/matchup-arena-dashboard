@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import Image from 'next/image';
 
 interface ImageUploadProps {
   onUpload: (file: File) => void;
@@ -18,6 +19,18 @@ export function ImageUpload({
   const [dragActive, setDragActive] = useState(false);
   const [preview, setPreview] = useState<string | null>(currentImage || null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = useCallback((file: File) => {
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Call upload callback
+    onUpload(file);
+  }, [onUpload]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -42,7 +55,7 @@ export function ImageUpload({
         handleFile(file);
       }
     },
-    [disabled]
+    [disabled, handleFile]
   );
 
   const handleChange = useCallback(
@@ -52,20 +65,8 @@ export function ImageUpload({
         handleFile(file);
       }
     },
-    []
+    [handleFile]
   );
-
-  const handleFile = (file: File) => {
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    // Call upload callback
-    onUpload(file);
-  };
 
   const handleClick = () => {
     if (!disabled) {
@@ -107,10 +108,12 @@ export function ImageUpload({
       >
         {preview ? (
           <>
-            <img
+            <Image
               src={preview}
               alt="Preview"
-              className="absolute inset-0 w-full h-full object-cover"
+              fill
+              className="object-cover"
+              unoptimized
             />
             {!disabled && (
               <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition flex items-center justify-center">

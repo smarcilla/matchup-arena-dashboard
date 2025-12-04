@@ -9,7 +9,6 @@ import {
   validateMatchdayForPublish,
   draftToCompetitionFile,
 } from "@/lib/validators";
-import type { DraftMatchday } from "@/lib/types";
 
 /**
  * POST /api/publish - Publica un matchday

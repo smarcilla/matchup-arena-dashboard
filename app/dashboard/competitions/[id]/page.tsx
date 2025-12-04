@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useDashboard } from '@/contexts/DashboardContext';
 import { LoadingPage, StatusBadge, ConfirmDialog } from '@/components';
-import { generateSlug } from '@/lib/validators';
 
 export default function CompetitionDetailPage() {
   const params = useParams();
@@ -32,9 +31,12 @@ export default function CompetitionDetailPage() {
   const [newMatchdayNumber, setNewMatchdayNumber] = useState(1);
 
   const competition = state?.competitions.find((c) => c.id === competitionId);
-  const matchdays = state?.matchdays
-    .filter((m) => m.competitionId === competitionId)
-    .sort((a, b) => b.matchday - a.matchday) || [];
+  const matchdays = useMemo(() => 
+    state?.matchdays
+      .filter((m) => m.competitionId === competitionId)
+      .sort((a, b) => b.matchday - a.matchday) || [],
+    [state?.matchdays, competitionId]
+  );
 
   useEffect(() => {
     if (competition) {

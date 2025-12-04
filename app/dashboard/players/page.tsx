@@ -3,6 +3,7 @@
 import { useDashboard } from '@/contexts/DashboardContext';
 import { LoadingPage } from '@/components';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { DraftPlayer, DraftMatchday, DraftCompetition } from '@/lib/types';
 
 export default function PlayersPage() {
@@ -108,11 +109,15 @@ export default function PlayersPage() {
                 <tr key={`${matchday.id}-${player.id}`} className="hover:bg-zinc-800/50">
                   <td className="px-6 py-4">
                     {player.image ? (
-                      <img
-                        src={player.image}
-                        alt={player.name}
-                        className="w-10 h-10 rounded-lg object-cover"
-                      />
+                      <div className="w-10 h-10 rounded-lg relative overflow-hidden">
+                        <Image
+                          src={player.image}
+                          alt={player.name}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
                     ) : (
                       <div className="w-10 h-10 rounded-lg bg-zinc-700 flex items-center justify-center">
                         <span className="text-zinc-400 text-xs">?</span>

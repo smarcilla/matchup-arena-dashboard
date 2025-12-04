@@ -1,0 +1,23 @@
+version: 2
+updates:
+  # Actualizaciones de dependencias npm (funciona igual con pnpm-lock.yaml)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    allow:
+      - dependency-type: "all"
+    open-pull-requests-limit: 10
+
+  # Solo parches de seguridad automáticos (incluye Typescript y CVE-2025-66478)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    security-updates-only: true
+
+  # Actualización de GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

@@ -9,11 +9,9 @@ import {
   LoadingPage,
   StatusBadge,
   ConfirmDialog,
-  JsonPreview,
   ImageUpload,
 } from '@/components';
-import { draftToCompetitionFile, validateMatchdayForPublish } from '@/lib/validators';
-import type { DraftPlayer } from '@/lib/types';
+import type { DraftPlayer, DraftMatchday, DraftCompetition } from '@/lib/types';
 
 export default function MatchdayDetailPage() {
   const params = useParams();
@@ -174,11 +172,49 @@ export default function MatchdayDetailPage() {
     router.push('/dashboard/matchdays');
   };
 
+  // Helper function for validation
+  const validateMatchday = (md: DraftMatchday): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    
+    if (md.players.length === 0) {
+      errors.push("Matchday must have at least one player");
+    }
+
+    const playersWithoutImage = md.players.filter((p) => !p.imageUploaded);
+    if (playersWithoutImage.length > 0) {
+      errors.push(`${playersWithoutImage.length} player(s) have images not uploaded`);
+    }
+
+    const playersWithEmptyName = md.players.filter((p) => !p.name || p.name.trim() === "");
+    if (playersWithEmptyName.length > 0) {
+      errors.push(`${playersWithEmptyName.length} player(s) have empty names`);
+    }
+
+    const rankings = md.players.map((p) => p.ranking);
+    const uniqueRankings = new Set(rankings);
+    if (rankings.length !== uniqueRankings.size) {
+      errors.push("All players must have unique rankings");
+    }
+
+    return { valid: errors.length === 0, errors };
+  };
+
+  // Helper to convert matchday to preview format
+  const getPreviewData = (md: DraftMatchday, comp: DraftCompetition) => ({
+    name: comp.name,
+    matchday: md.matchday,
+    players: md.players.map((p) => ({
+      name: p.name,
+      image: p.image,
+      ranking: p.ranking,
+    })),
+  });
+
   const handlePublish = async () => {
     setPublishError('');
     
     // Validate first
-    const validation = validateMatchdayForPublish(matchday);
+    const validation = validateMatchday(matchday);
     if (!validation.valid) {
       setPublishError(validation.errors.join('. '));
       return;
@@ -199,8 +235,8 @@ export default function MatchdayDetailPage() {
     await updateMatchday(matchdayId, { status: 'ready' });
   };
 
-  const previewData = draftToCompetitionFile(matchday, competition);
-  const validationResult = validateMatchdayForPublish(matchday);
+  const previewData = getPreviewData(matchday, competition);
+  const validationResult = validateMatchday(matchday);
 
   return (
     <div className="p-8">
@@ -479,20 +515,11 @@ export default function MatchdayDetailPage() {
 
       {/* JSON Preview */}
       {showPreview && (
-        <div className="mt-8">
-          <JsonPreview
-            data={previewData}
-            title="JSON Output Preview"
-            onValidate={async () => {
-              const response = await fetch('/api/validate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type: 'competition', data: previewData }),
-              });
-              const result = await response.json();
-              return result.data;
-            }}
-          />
+        <div className="mt-8 bg-zinc-900 rounded-xl border border-zinc-800 p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">JSON Output Preview</h3>
+          <pre className="bg-zinc-800 p-4 rounded-lg text-sm text-zinc-300 overflow-x-auto">
+            {JSON.stringify(previewData, null, 2)}
+          </pre>
         </div>
       )}
 

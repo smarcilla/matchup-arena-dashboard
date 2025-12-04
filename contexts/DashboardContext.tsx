@@ -14,7 +14,20 @@ import type {
   DraftMatchday,
   DraftPlayer,
 } from '@/lib/types';
-import { generateId, generateSlug } from '@/lib/validators';
+import {
+  getDashboardState,
+  createCompetition as createCompetitionAction,
+  updateCompetition as updateCompetitionAction,
+  deleteCompetition as deleteCompetitionAction,
+  createMatchday as createMatchdayAction,
+  updateMatchday as updateMatchdayAction,
+  deleteMatchday as deleteMatchdayAction,
+  createPlayer as createPlayerAction,
+  updatePlayer as updatePlayerAction,
+  deletePlayer as deletePlayerAction,
+  publishMatchday as publishMatchdayAction,
+} from '@/lib/actions';
+import { generateSlug } from '@/lib/validators';
 
 interface DashboardContextType {
   state: DashboardState | null;
@@ -50,44 +63,15 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const fetchState = useCallback(async () => {
     try {
-      const response = await fetch('/api/state');
-      const result = await response.json();
-      
-      if (result.success) {
-        setState(result.data);
-        setError(null);
-      } else {
-        setError(result.error || 'Failed to fetch state');
-      }
+      setLoading(true);
+      const data = await getDashboardState();
+      setState(data);
+      setError(null);
     } catch (err) {
-      setError('Failed to connect to server');
+      setError('Failed to fetch state');
       console.error('Error fetching state:', err);
     } finally {
       setLoading(false);
-    }
-  }, []);
-
-  const saveState = useCallback(async (newState: DashboardState) => {
-    try {
-      const response = await fetch('/api/state', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newState),
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        setState(result.data);
-        return true;
-      } else {
-        setError(result.error || 'Failed to save state');
-        return false;
-      }
-    } catch (err) {
-      setError('Failed to save state');
-      console.error('Error saving state:', err);
-      return false;
     }
   }, []);
 
@@ -97,184 +81,144 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   // Competition actions
   const addCompetition = useCallback(async (name: string): Promise<DraftCompetition> => {
-    const now = new Date().toISOString();
-    const competition: DraftCompetition = {
-      id: generateId(),
-      name,
-      slug: generateSlug(name),
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const newState: DashboardState = {
-      ...state!,
-      competitions: [...state!.competitions, competition],
-      lastUpdated: now,
-    };
-
-    await saveState(newState);
-    return competition;
-  }, [state, saveState]);
+    try {
+      const slug = generateSlug(name);
+      const competition = await createCompetitionAction({ name, slug });
+      await fetchState();
+      return {
+        id: competition.id,
+        name: competition.name,
+        slug: competition.slug,
+        createdAt: competition.createdAt.toISOString(),
+        updatedAt: competition.updatedAt.toISOString(),
+      };
+    } catch (err) {
+      console.error('Error adding competition:', err);
+      throw err;
+    }
+  }, [fetchState]);
 
   const updateCompetition = useCallback(async (id: string, data: Partial<DraftCompetition>) => {
-    const now = new Date().toISOString();
-    const newState: DashboardState = {
-      ...state!,
-      competitions: state!.competitions.map((c) =>
-        c.id === id ? { ...c, ...data, updatedAt: now } : c
-      ),
-      lastUpdated: now,
-    };
+    try {
+      await updateCompetitionAction(id, {
+        name: data.name,
+        slug: data.slug,
+      });
+      await fetchState();
+    } catch (err) {
+      console.error('Error updating competition:', err);
+      throw err;
+    }
+  }, [fetchState]);
 
-    await saveState(newState);
-  }, [state, saveState]);
-
-  const deleteCompetition = useCallback(async (id: string) => {
-    const now = new Date().toISOString();
-    const newState: DashboardState = {
-      ...state!,
-      competitions: state!.competitions.filter((c) => c.id !== id),
-      matchdays: state!.matchdays.filter((m) => m.competitionId !== id),
-      lastUpdated: now,
-    };
-
-    await saveState(newState);
-  }, [state, saveState]);
+  const deleteCompetitionFn = useCallback(async (id: string) => {
+    try {
+      await deleteCompetitionAction(id);
+      await fetchState();
+    } catch (err) {
+      console.error('Error deleting competition:', err);
+      throw err;
+    }
+  }, [fetchState]);
 
   // Matchday actions
   const addMatchday = useCallback(async (competitionId: string, matchdayNumber: number): Promise<DraftMatchday> => {
-    const now = new Date().toISOString();
-    const matchday: DraftMatchday = {
-      id: generateId(),
-      competitionId,
-      matchday: matchdayNumber,
-      status: 'draft',
-      players: [],
-      createdAt: now,
-      updatedAt: now,
-    };
+    try {
+      const matchday = await createMatchdayAction({ competitionId, matchday: matchdayNumber });
+      await fetchState();
+      return {
+        id: matchday.id,
+        competitionId: matchday.competitionId,
+        matchday: matchday.matchday,
+        status: matchday.status as 'draft' | 'ready' | 'published',
+        players: [],
+        createdAt: matchday.createdAt.toISOString(),
+        updatedAt: matchday.updatedAt.toISOString(),
+      };
+    } catch (err) {
+      console.error('Error adding matchday:', err);
+      throw err;
+    }
+  }, [fetchState]);
 
-    const newState: DashboardState = {
-      ...state!,
-      matchdays: [...state!.matchdays, matchday],
-      lastUpdated: now,
-    };
+  const updateMatchdayFn = useCallback(async (id: string, data: Partial<DraftMatchday>) => {
+    try {
+      await updateMatchdayAction(id, {
+        status: data.status,
+        matchday: data.matchday,
+      });
+      await fetchState();
+    } catch (err) {
+      console.error('Error updating matchday:', err);
+      throw err;
+    }
+  }, [fetchState]);
 
-    await saveState(newState);
-    return matchday;
-  }, [state, saveState]);
-
-  const updateMatchday = useCallback(async (id: string, data: Partial<DraftMatchday>) => {
-    const now = new Date().toISOString();
-    const newState: DashboardState = {
-      ...state!,
-      matchdays: state!.matchdays.map((m) =>
-        m.id === id ? { ...m, ...data, updatedAt: now } : m
-      ),
-      lastUpdated: now,
-    };
-
-    await saveState(newState);
-  }, [state, saveState]);
-
-  const deleteMatchday = useCallback(async (id: string) => {
-    const now = new Date().toISOString();
-    const newState: DashboardState = {
-      ...state!,
-      matchdays: state!.matchdays.filter((m) => m.id !== id),
-      lastUpdated: now,
-    };
-
-    await saveState(newState);
-  }, [state, saveState]);
+  const deleteMatchdayFn = useCallback(async (id: string) => {
+    try {
+      await deleteMatchdayAction(id);
+      await fetchState();
+    } catch (err) {
+      console.error('Error deleting matchday:', err);
+      throw err;
+    }
+  }, [fetchState]);
 
   // Player actions
   const addPlayer = useCallback(async (matchdayId: string, player: Omit<DraftPlayer, 'id'>) => {
-    const now = new Date().toISOString();
-    const newPlayer: DraftPlayer = {
-      ...player,
-      id: generateId(),
-    };
+    try {
+      await createPlayerAction({
+        matchdayId,
+        name: player.name,
+        image: player.image,
+        imageUploaded: player.imageUploaded,
+        ranking: player.ranking,
+      });
+      await fetchState();
+    } catch (err) {
+      console.error('Error adding player:', err);
+      throw err;
+    }
+  }, [fetchState]);
 
-    const newState: DashboardState = {
-      ...state!,
-      matchdays: state!.matchdays.map((m) =>
-        m.id === matchdayId
-          ? { ...m, players: [...m.players, newPlayer], updatedAt: now }
-          : m
-      ),
-      lastUpdated: now,
-    };
+  const updatePlayerFn = useCallback(async (matchdayId: string, playerId: string, data: Partial<DraftPlayer>) => {
+    try {
+      await updatePlayerAction(playerId, {
+        name: data.name,
+        image: data.image,
+        imageUploaded: data.imageUploaded,
+        ranking: data.ranking,
+      });
+      await fetchState();
+    } catch (err) {
+      console.error('Error updating player:', err);
+      throw err;
+    }
+  }, [fetchState]);
 
-    await saveState(newState);
-  }, [state, saveState]);
-
-  const updatePlayer = useCallback(async (matchdayId: string, playerId: string, data: Partial<DraftPlayer>) => {
-    const now = new Date().toISOString();
-    const newState: DashboardState = {
-      ...state!,
-      matchdays: state!.matchdays.map((m) =>
-        m.id === matchdayId
-          ? {
-              ...m,
-              players: m.players.map((p) =>
-                p.id === playerId ? { ...p, ...data } : p
-              ),
-              updatedAt: now,
-            }
-          : m
-      ),
-      lastUpdated: now,
-    };
-
-    await saveState(newState);
-  }, [state, saveState]);
-
-  const deletePlayer = useCallback(async (matchdayId: string, playerId: string) => {
-    const now = new Date().toISOString();
-    const newState: DashboardState = {
-      ...state!,
-      matchdays: state!.matchdays.map((m) =>
-        m.id === matchdayId
-          ? {
-              ...m,
-              players: m.players.filter((p) => p.id !== playerId),
-              updatedAt: now,
-            }
-          : m
-      ),
-      lastUpdated: now,
-    };
-
-    await saveState(newState);
-  }, [state, saveState]);
+  const deletePlayerFn = useCallback(async (matchdayId: string, playerId: string) => {
+    try {
+      await deletePlayerAction(playerId);
+      await fetchState();
+    } catch (err) {
+      console.error('Error deleting player:', err);
+      throw err;
+    }
+  }, [fetchState]);
 
   // Publish action
-  const publishMatchday = useCallback(async (matchdayId: string): Promise<{ success: boolean; error?: string }> => {
+  const publishMatchdayFn = useCallback(async (matchdayId: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const response = await fetch('/api/publish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ matchdayId }),
-      });
-
-      const result = await response.json();
-
+      const result = await publishMatchdayAction(matchdayId);
       if (result.success) {
-        // Refresh state after publishing
         await fetchState();
-        return { success: true };
-      } else {
-        return {
-          success: false,
-          error: result.error || 'Failed to publish',
-        };
       }
+      return result;
     } catch (err) {
       console.error('Error publishing:', err);
       return {
         success: false,
-        error: 'Failed to connect to server',
+        error: 'Failed to publish matchday',
       };
     }
   }, [fetchState]);
@@ -286,14 +230,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     refreshState: fetchState,
     addCompetition,
     updateCompetition,
-    deleteCompetition,
+    deleteCompetition: deleteCompetitionFn,
     addMatchday,
-    updateMatchday,
-    deleteMatchday,
+    updateMatchday: updateMatchdayFn,
+    deleteMatchday: deleteMatchdayFn,
     addPlayer,
-    updatePlayer,
-    deletePlayer,
-    publishMatchday,
+    updatePlayer: updatePlayerFn,
+    deletePlayer: deletePlayerFn,
+    publishMatchday: publishMatchdayFn,
   };
 
   return (

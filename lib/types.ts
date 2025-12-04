@@ -11,26 +11,6 @@ export type Player = {
   ranking: number;
 };
 
-/**
- * Representa el archivo JSON de una competición/matchday específico
- */
-export type CompetitionFile = {
-  name: string;
-  matchday: number;
-  players: Player[];
-};
-
-/**
- * Representa el índice raíz que lista todas las competiciones activas
- */
-export type RootIndex = {
-  competitions: {
-    name: string;
-    matchday: number;
-    file: string; // ruta JSON en blob
-  }[];
-};
-
 // =============================================================================
 // DRAFT TYPES - Para el modo borrador antes de publicar
 // =============================================================================
@@ -70,13 +50,13 @@ export type DraftMatchday = {
 export type DraftPlayer = {
   id: string;
   name: string;
-  image: string; // URL temporal o final
+  image: string; // URL de imagen en Blob
   imageUploaded: boolean; // si la imagen ya está en Blob
   ranking: number;
 };
 
 /**
- * Estado completo del dashboard (almacenado en Blob como draft)
+ * Estado completo del dashboard
  */
 export type DashboardState = {
   competitions: DraftCompetition[];
@@ -97,11 +77,6 @@ export type ApiResponse<T = unknown> = {
 export type BlobUploadResult = {
   url: string;
   pathname: string;
-};
-
-export type ValidationResult = {
-  valid: boolean;
-  errors: string[];
 };
 
 // =============================================================================
@@ -134,3 +109,4 @@ export type BlobFileInfo = {
   size: number;
   uploadedAt: Date;
 };
+

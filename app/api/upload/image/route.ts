@@ -1,5 +1,21 @@
 import { NextResponse } from "next/server";
-import { uploadPlayerImage } from "@/lib/blob";
+import { put } from "@vercel/blob";
+
+/**
+ * Genera la ruta para una imagen de jugador
+ */
+function getPlayerImagePath(
+  competitionSlug: string,
+  matchday: number,
+  playerName: string,
+  extension: string = "webp"
+): string {
+  const safeName = playerName
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+  return `images/${competitionSlug}/${matchday}/${safeName}.${extension}`;
+}
 
 /**
  * POST /api/upload/image - Sube una imagen de jugador al Blob
@@ -51,18 +67,30 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await uploadPlayerImage(
+    // Determinar extensión
+    let extension = "webp";
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (ext && ["jpg", "jpeg", "png", "webp", "gif"].includes(ext)) {
+      extension = ext === "jpeg" ? "jpg" : ext;
+    }
+
+    const pathname = getPlayerImagePath(
       competitionSlug,
       parseInt(matchday, 10),
       playerName,
-      file
+      extension
     );
+
+    const blob = await put(pathname, file, {
+      access: "public",
+      addRandomSuffix: false,
+    });
 
     return NextResponse.json({
       success: true,
       data: {
-        url: result.url,
-        pathname: result.pathname,
+        url: blob.url,
+        pathname: blob.pathname,
       },
     });
   } catch (error) {
@@ -73,3 +101,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

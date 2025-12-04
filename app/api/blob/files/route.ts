@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
-import { listBlobFiles, deleteBlobFile } from "@/lib/blob";
+import { list, del } from "@vercel/blob";
 
 /**
- * GET /api/blob/files - Lista archivos en el Blob
+ * GET /api/blob/files - Lista archivos de imágenes en el Blob
  */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const prefix = searchParams.get("prefix") || undefined;
+    const prefix = searchParams.get("prefix") || "images/";
 
-    const files = await listBlobFiles(prefix);
+    const { blobs } = await list({ prefix });
+
+    const files = blobs.map((blob) => ({
+      url: blob.url,
+      pathname: blob.pathname,
+      size: blob.size,
+      uploadedAt: blob.uploadedAt,
+    }));
 
     return NextResponse.json({
       success: true,
@@ -39,14 +46,7 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const success = await deleteBlobFile(url);
-
-    if (!success) {
-      return NextResponse.json(
-        { success: false, error: "Failed to delete file" },
-        { status: 500 }
-      );
-    }
+    await del(url);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -57,3 +57,4 @@ export async function DELETE(request: Request) {
     );
   }
 }
+

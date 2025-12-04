@@ -135,7 +135,6 @@ export default function MatchdayDetailPage() {
     // Reset form
     setPlayerName('');
     setPlayerRanking(Math.max(...matchday.players.map((p) => p.ranking), 0) + 2);
-    setPlayerImage(null);
     setPlayerImageUrl('');
     setShowAddPlayer(false);
   };

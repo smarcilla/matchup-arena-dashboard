@@ -1,0 +1,57 @@
+// =============================================================================
+// MATCHUP ARENA DASHBOARD - PRISMA SCHEMA
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// =============================================================================
+// MODELS
+// =============================================================================
+
+model Competition {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  matchdays Matchday[]
+
+  @@map("competitions")
+}
+
+model Matchday {
+  id            String      @id @default(cuid())
+  matchday      Int
+  status        String      @default("draft") // draft, ready, published
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  competitionId String
+  players       Player[]
+
+  @@unique([competitionId, matchday])
+  @@map("matchdays")
+}
+
+model Player {
+  id            String   @id @default(cuid())
+  name          String
+  image         String   // URL de imagen en Blob
+  imageUploaded Boolean  @default(false)
+  ranking       Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  matchday      Matchday @relation(fields: [matchdayId], references: [id], onDelete: Cascade)
+  matchdayId    String
+
+  @@unique([matchdayId, ranking])
+  @@map("players")
+}
